@@ -1,0 +1,87 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "jamesmcm"
+date: "07/12/2014"
+output: html_document
+---
+
+In this project we will use accelerometer data from http://groupware.les.inf.puc-rio.br/har and attempt to predict the manner in which they did the exercise.
+
+```{r}
+dftrain<-read.csv("./pml-training.csv")
+dftest<-read.csv("./pml-testing.csv")
+
+mycols <- NULL
+for (i in 1:length(names(dftrain))){
+if (class(dftrain[,names(dftrain)[i]])=="numeric" & any(is.na(dftrain[,names(dftrain)[i]]))==F ){
+  mycols<-c(mycols,names(dftrain)[i])
+}  
+}
+mycols<-c(mycols,"classe")
+newdftrain<-dftrain[,mycols]
+```
+We use a random forest classifier on the numeric features without missing values, this results in 27 predictor variables, and the classe class variable:
+
+`r mycols`
+
+
+```{r eval=FALSE}
+set.seed(101)
+
+library(caret)
+
+fit1 <- train(classe ~ ., data = newdftrain, method = "rf")
+```
+We obtain the following Random Forest model:
+
+    Random Forest 
+
+    19622 samples
+       27 predictors
+        5 classes: 'A', 'B', 'C', 'D', 'E' 
+
+    No pre-processing
+    Resampling: Bootstrapped (25 reps) 
+
+    Type of random forest: classification
+    Number of trees: 500
+    No. of variables tried at each split: 2
+
+    mtry  Accuracy   Kappa      Accuracy SD   Kappa SD    
+    2    0.9932632  0.9914794  0.0008701709  0.001100304
+   
+
+    Confusion matrix:
+
+         A    B    C    D    E  class.error
+    A 5577    2    0    0    1 0.0005376344
+    B   10 3778    9    0    0 0.0050039505
+    C    0   10 3396   16    0 0.0075978960
+    D    0    0   19 3194    3 0.0068407960
+    E    0    0    1    6 3600 0.0019406709
+
+
+The out of sample error can be approximated by the out of bag error, computed over the 25 resamples as cross-validation:
+
+    OOB estimate of  error rate: 0.39%
+
+
+The predictions for the test set were computed as follows:
+
+```{r eval=FALSE}
+answers<-NULL
+for (i in 1:20){
+answers<-c(answers,as.character(predict(fit1, dftest[i,])))
+}
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(answers)
+```
+
